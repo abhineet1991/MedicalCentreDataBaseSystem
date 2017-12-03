@@ -14,6 +14,12 @@ public class MainServerReplica {
 		thread1.start();
 		
 		
+		ServerReplica rep2 = new ServerReplica(2);
+		Thread thread2 = new Thread(rep2);
+		thread2.start();
 		
+		ServerReplica rep3 = new ServerReplica(3);
+		Thread thread3 = new Thread(rep3);
+		thread3.start();
 	}
 }

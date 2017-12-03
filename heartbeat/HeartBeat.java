@@ -118,4 +118,181 @@ public class HeartBeat implements Runnable{
 		return result;
 	}
 	
+	boolean validateServerStatus(final int udpPeerServerPort)
+	{
+		result = true;
+		resultList.clear();
+		for (ServerConfig server : ServerReplica.configMap.values()) 
+		{
+			if(server.serverId != this.serverId && server.isAlive)
+			{
+				final int peerPort = server.heartbeatPort;
+				if(peerPort != udpPeerServerPort)
+				{
+					Thread myThread = new Thread();
+					myThread = new Thread(new Runnable() {
+						public void run() {
+							DatagramSocket aSocket = null;
+							try {
+								// Send request for getRecordCount
+								System.out.println(serverName+"::HeartBeat::validateServerStatus::validateServerStatus :::send request to server :::"+peerPort);
+								aSocket = new DatagramSocket();
+								byte[] m = Integer.toString(udpPeerServerPort).getBytes();
+								InetAddress aHost = InetAddress.getByName("localhost");
+								DatagramPacket request = new DatagramPacket(m, m.length, aHost, peerPort);
+								aSocket.send(request);
+								byte[] buffer = new byte[1000];
+								DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+								aSocket.receive(reply);
+								String replyStr = new String(reply.getData(), 0, reply.getLength());
+								System.out.println(serverName+"::HeartBeat::validateServerStatus::receive reply from server:: "+udpPeerServerPort+" :: reply:::"+replyStr);
+								if(replyStr.contains("false"))
+								{
+									resultList.add(false);
+								}
+								
+							} catch (SocketException e) {
+								System.out.println(serverName+"::HeartBeat::validateServerStatus :: " + e.getMessage());
+								//resultGetRecordCounts = "fail";
+							} catch (IOException e) {
+								System.out.println(serverName+"::HeartBeat::validateServerStatus: " + e.getMessage());
+								//resultGetRecordCounts = "fail";
+							} finally {
+								if (aSocket != null)
+									aSocket.close();
+							}
+						}
+					});
+					myThread.start();
+					try {
+						myThread.join();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			
+			}
+		}
+		
+		int count = 0;
+		for (boolean res : resultList) {
+			if (!res) {
+				count++;
+			}
+			else
+			{
+				count--;
+			}
+		}
+		
+		result = (count > 0) ? false: true;
+		System.out.println(serverName+"::HeartBeat::validateServerStatus: Server status with port: " + udpPeerServerPort + " :::: " + result);
+		return result;
+	}
+	
+	/*
+	 * Starts the UDP Server thread
+	 */
+	public void start() {
+		System.out.println(serverName+"::Start HeartBeat:: start() method");
+
+		if (t == null) {
+			t = new Thread(this, udpServerThreadName);
+			t.start();
+			System.out.println(serverName+"::HeartBeat:: start() ::UDP Server Thread Started");
+		}
+		System.out.println(serverName+"::End HeartBeat:: start() method");
+	}
+	
+	/*
+	 * Thread for UDP Server
+	 */
+	public void run() {
+		System.out.println(serverName+"::Start HeartBeat:: run() method");
+		Thread myThread = new Thread();
+		myThread = new Thread(new Runnable() {
+			
+			public void run() {
+				// TODO Auto-generated method stub
+				DatagramSocket asocket = null;
+				try {
+					asocket = new DatagramSocket(udpServerPort);
+		
+					while (true) {
+						byte[] m = new byte[1000];
+						DatagramPacket request = new DatagramPacket(m, m.length);
+						asocket.receive(request);
+						String reqStr = new String(request.getData(), 0, request.getLength());
+						System.out.println(serverName+"::HeartBeat:: run() :: Request for getRecordCount of type " + reqStr);
+						String replyStr = "";
+						if("isAlive".equals(reqStr))
+						{
+							replyStr = serverName + ":yes@" + (new Date());
+						}
+						else
+						{
+							int port = Integer.parseInt(reqStr);
+							boolean replybool = checkIsAlive(port, true);
+							replyStr = String.valueOf(replybool);
+						}
+						byte[] buffer = new byte[1000];
+						System.out.println(serverName+"::HeartBeat:: run() :: Reply sent: " + replyStr);
+						buffer = replyStr.getBytes();
+						DatagramPacket reply = new DatagramPacket(buffer, buffer.length, request.getAddress(),
+								request.getPort());
+						asocket.send(reply);
+					}
+				} catch (SocketException e) {
+					System.out.println(serverName+"::HeartBeat:: run() method:" + e.getMessage());
+				} catch (IOException e) {
+					System.out.println(serverName+"::HeartBeat:: run() method:" + e.getMessage());
+				} finally {
+					if (asocket != null) {
+						asocket.close();
+					}
+				}
+			}
+		});
+		
+		myThread.start();
+	
+		try
+		{
+			while(true)
+			{
+				t.sleep(FREQ);
+				for (ServerConfig server : ServerReplica.configMap.values()) 
+				{
+					if(server.serverId != this.serverId && server.isAlive)
+					{
+						checkIsAlive(server.heartbeatPort, false);
+					}
+				}
+				for(int portToRemove : portValuesToRemove)
+				{
+					for (ServerConfig server : ServerReplica.configMap.values()) 
+					{
+						if(server.heartbeatPort == portToRemove)
+						{
+							server.isAlive = false;
+							if (server.isGroupLeader) {
+								try {
+									ElectionAlgo.bullyElect(this.serverId, server.serverId);
+								} catch (ConnectException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch(InterruptedException e)
+		{
+			System.out.println(e);
+		}
+	}
 }
