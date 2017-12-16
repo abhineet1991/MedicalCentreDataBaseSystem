@@ -37,6 +37,28 @@ public class Request implements Serializable{
 		System.out.println("Debug: In Request ctor: requestID: and name is "+RequestID + fName);
 	}
 	
+	public Request(int RequestID,String methodName, String managerID ,String fName, String lName, String desig,String stat_Date, String stat, String clinicLocation){
+		this.RequestID = RequestID;
+		this.managerID = managerID;
+		this.firstName =fName;
+		this.lastName = lName;
+		this.designation = desig;
+		this.status = stat;
+		this.status_Date = stat_Date;
+		this.methodName = methodName;
+		this.clinicLocation = clinicLocation;
+	}
+	
+	public Request (int RequestID,String methodName, String managerID ,String recordID, String fieldName, String newValue, String clinicLocation){
+		this.RequestID = RequestID;
+		this.managerID = managerID;
+		this.recordID = recordID;
+		this.fieldName = fieldName;
+		this.newValue = newValue;
+		this.methodName = methodName;
+		this.clinicLocation = clinicLocation;
+	}
+	
 	public Request (int RequestID,String methodName, String managerID ,String recordType, String clinicLocation){
 		this.RequestID = RequestID;
 		this.managerID = managerID;

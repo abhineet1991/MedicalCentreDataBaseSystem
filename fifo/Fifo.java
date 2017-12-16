@@ -103,6 +103,14 @@ public class Fifo implements Runnable
 		}
 	}
 	
+	public void unicast(byte []b, int serverId)
+	{
+		System.out.println(serverName + " ::FIFO::: unicast ::: to serverid:: " + serverId);
+		ServerConfig server = ServerReplica.configMap.get(new Integer(serverId));
+		if(server.isAlive)
+			send(b, server.fifoPort, server.serverId);
+	}
+	
 	/*
 	 * Starts the UDP Server thread
 	 */
@@ -164,7 +172,50 @@ public class Fifo implements Runnable
 		
 		myThread.start();
 	}
+	
+	public void nonGrpLeaderTask() {
 
+		
+		DatagramSocket asocket = null;
+		try {
+			asocket = new DatagramSocket(udpServerPort);
+
+			/*while (true) {*/
+				byte[] m = new byte[2048];
+				DatagramPacket request = new DatagramPacket(m, m.length);
+				System.out.println(serverName+ " :: Fifo:: nonGrpLeaderTask()");
+				asocket.receive(request);
+				//String reqStr = new String(request.getData(), 0, request.getLength());
+				System.out.println(serverName+ " :: Fifo:: nonGrpLeaderTask() :: Data received from " + request.getAddress());
+				
+				Request req = (Request) getObjectFromByteArray(request.getData());
+				System.out.println(serverName+ " :: Fifo:: nonGrpLeaderTask() :: Request Id received :" + req.getRequestID());
+				synchronized (reqMap) {
+					if (!reqMap.containsKey(req.getRequestID()))
+					{
+						reqMap.put(req.getRequestID(), req);
+					}					
+				}
+				
+				String replyStr = "ACK";
+				byte[] buffer = new byte[1000];
+				System.out.println(serverName+ " :: Fifo:: nonGrpLeaderTask() :: ACK sent: " + replyStr);
+				buffer = replyStr.getBytes();
+				DatagramPacket reply = new DatagramPacket(buffer, buffer.length, request.getAddress(),
+						request.getPort());
+				asocket.send(reply);
+			/*}*/
+		} catch (SocketException e) {
+			System.out.println(serverName+ " :: Fifo:: nonGrpLeaderTask() method:" + e.getMessage());
+		} catch (IOException e) {
+			System.out.println(serverName+ " :: Fifo:: nonGrpLeaderTask() method:" + e.getMessage());
+		} finally {
+			if (asocket != null) {
+				asocket.close();
+			}
+		}
+	}
+	
 	void grpLeaderTask(){
 		DatagramSocket asocket = null;
 		try {

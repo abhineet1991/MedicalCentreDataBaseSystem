@@ -71,6 +71,29 @@ public class FrontEnd extends FrontEndIDLPOA{
 		
 	}
 	
+	public String editRecord (String managerID, String recordID, String fieldName, String newValue){
+		setClinicLocation(managerID);
+		
+		Response responseObj = null;
+		Request reqObj = new Request (giveID(),"editRecord",managerID,recordID, fieldName, newValue, clinicLocation);
+		FECommunication feCommunicationObj = new FECommunication(reqObj);
+		feCommunicationObj.send();
+		responseObj = feCommunicationObj.recieve();
+		return responseObj.getResultStr();
+		
+	}
+	
+	public String getCount(String managerID, String recordType){
+		setClinicLocation(managerID);
+		
+		Response responseObj = null;
+		Request reqObj = new Request (giveID(),"getCount",managerID, recordType, clinicLocation);
+		FECommunication feCommunicationObj = new FECommunication(reqObj);
+		feCommunicationObj.send();
+		responseObj = feCommunicationObj.recieve();
+		return responseObj.getResultStr();
+
+	}
 	
 	public String transferRecord(String managerID,String recordID, String location){
 		setClinicLocation(managerID);

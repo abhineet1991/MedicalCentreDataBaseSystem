@@ -68,6 +68,39 @@ public class ClinicServerImpl implements Runnable {
 	}
 
 	/*
+	 * Creates new Doctor record
+	 */
+	public String createDRecord(String managerId, String firstName, String lastName, String address, String phone, String specialization,
+			String location) {
+		log("Start ClinicServerImpl:: createDRecord() method");
+		log("firstName : " + firstName);
+		log("lastName : " + lastName);
+		log("address : " + address);
+		log("phone : " + phone);
+		log("specialization : " + specialization);
+		log("location : " + location);
+		String result = "fail";
+		if (location.equalsIgnoreCase(DRecord.LOCATION_MONTREAL) || location.equalsIgnoreCase(DRecord.LOCATION_LAVAL)
+				|| location.equalsIgnoreCase(DRecord.LOCATION_DDO)) {
+
+			String recordId = "DR" + getNextId();
+			Record drecord = new DRecord(recordId, firstName, lastName, address, phone, specialization, location);
+
+			ArrayList<Record> list = recordMap.get(getFirstChar(lastName));
+
+			// list object is synchronized before adding a record handling
+			// concurrency issues
+			synchronized (list) {
+				list.add(drecord);
+				result = recordId;
+			}
+			log("Record created with id : " + recordId);
+		}
+		log("Start ClinicServerImpl:: createDRecord() method");
+		return result;
+	}
+
+	/*
 	 * Creates new Nurse record
 	 */
 	public String createNRecord(String managerId, String firstName, String lastName, String designation, String status, String statusDate) {
@@ -196,7 +229,73 @@ public class ClinicServerImpl implements Runnable {
 	/*
 	 * Edits a field of record with given recordID
 	 */
-	
+	public String editRecord(String managerId, String recordID, String fieldName, String newValue) {
+		log("Start ClinicServerImpl:: getLocalRecordCount() method");
+		log("recordID: " + recordID);
+		log("fieldName: " + fieldName);
+		log("newValue: " + newValue);
+		String[] editableFields = { "Address", "Phone", "Location", "Designation", "Status", "Status Date" };
+		String result = "fail";
+		if (Arrays.asList(editableFields).contains(fieldName)) {
+			ArrayList<ArrayList<Record>> listList = new ArrayList<ArrayList<Record>>(recordMap.values());
+			boolean finished = false;
+			for (Iterator iterator = listList.iterator(); (iterator.hasNext()) && !finished;) {
+				ArrayList<Record> arrayList = (ArrayList<Record>) iterator.next();
+				for (Iterator iterator2 = arrayList.iterator(); iterator2.hasNext();) {
+					Record record = (Record) iterator2.next();
+					if (record.getRecordId().equals(recordID)) {
+						// synchronized block for record
+						EditableFunc func = EditableFunc.valueOf(fieldName);
+						synchronized (record) {
+							switch (func) {
+							case Address:
+								((DRecord) record).setAddress(newValue);
+								result = record.getRecordId();
+								break;
+							case Phone:
+								((DRecord) record).setPhone(newValue);
+								result = record.getRecordId();
+								break;
+							case Location:
+								if (newValue.equalsIgnoreCase(DRecord.LOCATION_MONTREAL)
+										|| newValue.equalsIgnoreCase(DRecord.LOCATION_LAVAL)
+										|| newValue.equalsIgnoreCase(DRecord.LOCATION_DDO)) {
+									((DRecord) record).setLocation(newValue);
+									result = record.getRecordId();
+								}
+								break;
+							case Designation:
+								if (newValue.equals(NRecord.DESIG_JR) || newValue.equals(NRecord.DESIG_SR)) {
+									((NRecord) record).setDesignation(newValue);
+									result = record.getRecordId();
+								}
+								break;
+							case Status:
+								if (newValue.equals(NRecord.STATUS_ACTIVE)
+										|| newValue.equals(NRecord.STATUS_TERMINATED)) {
+									((NRecord) record).setStatus(newValue);
+									result = record.getRecordId();
+								}
+								break;
+							case StatusDate:
+								((NRecord) record).setStatusDate(newValue);
+								result = record.getRecordId();
+								break;
+							default:
+								break;
+							}
+						}
+						finished = true;
+						break;
+					}
+				}
+			}
+		}
+		log("Result : " + result);
+		log("End ClinicServerImpl:: editRecord() method");
+		return result;
+	}
+
 	/*
 	 * gets record count with record type for this server
 	 */
