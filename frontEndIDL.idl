@@ -1,0 +1,11 @@
+module frontEndIDL {
+	
+		interface FrontEndIDL{
+		string createDRecord(in string managerID, in string fname, in string lname, in string address,  in string phone, in string specialization, in string location) ;
+		string createNRecord(in string managerID, in string fname, in string lname, in string designation, in string status, in string statusDate);
+		string getCount(in string managerID, in string recordType);
+		string editRecord(in string managerID,in string recordID, in string fieldName, in string newValue);
+		string transferRecord(in string managerID,in string recordID, in string remoteClinicServer);
+	};
+};
+	
